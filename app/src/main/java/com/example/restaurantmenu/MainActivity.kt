@@ -1,4 +1,3 @@
-
 package com.example.restaurantmenu
 
 import android.app.Activity
@@ -16,7 +15,8 @@ data class FoodItem(
     var name: String,
     var price: String,
     var image: String = "",
-    var category: String = "Starters"
+    var category: String = "Starters",
+    var ingredients: String = ""
 )
 
 class MainActivity : Activity() {
@@ -76,9 +76,11 @@ class MainActivity : Activity() {
         })
 
         val scroll = ScrollView(this)
+
         list = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
         }
+
         scroll.addView(list)
 
         root.addView(
@@ -136,21 +138,47 @@ class MainActivity : Activity() {
                 if (item.image.isNotEmpty()) {
                     try {
                         photo.setImageURI(Uri.parse(item.image))
-                    } catch (_: Exception) { }
+                    } catch (_: Exception) {
+                        // Keep the picture area empty if unavailable.
+                    }
                 }
 
-                card.addView(photo, LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    dp(145)
-                ))
+                card.addView(
+                    photo,
+                    LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        dp(145)
+                    )
+                )
 
-                card.addView(TextView(this).apply {
-                    text = item.name
-                    textSize = 20f
-                    setTypeface(null, Typeface.BOLD)
-                    setTextColor(Color.BLACK)
-                    setPadding(0, dp(8), 0, dp(4))
+                // Dish name and three-dot menu.
+                val heading = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                }
+
+                heading.addView(
+                    TextView(this).apply {
+                        text = item.name
+                        textSize = 20f
+                        setTypeface(null, Typeface.BOLD)
+                        setTextColor(Color.BLACK)
+                        setPadding(0, dp(8), 0, dp(4))
+                    },
+                    LinearLayout.LayoutParams(0, -2, 1f)
+                )
+
+                heading.addView(Button(this).apply {
+                    text = "\u22EE"
+                    textSize = 26f
+                    minWidth = dp(48)
+                    minimumWidth = dp(48)
+                    setPadding(0, 0, 0, 0)
+                    contentDescription = "Options for ${item.name}"
+                    setOnClickListener { showDishMenu(index) }
                 })
+
+                card.addView(heading)
 
                 card.addView(TextView(this).apply {
                     text = "Price: ${item.price}"
@@ -158,50 +186,121 @@ class MainActivity : Activity() {
                     setTextColor(green)
                 })
 
-                val buttons = LinearLayout(this).apply {
-                    orientation = LinearLayout.HORIZONTAL
+                if (item.ingredients.isNotBlank()) {
+                    card.addView(TextView(this).apply {
+                        text = "Ingredients: ${item.ingredients}"
+                        textSize = 14f
+                        setTextColor(Color.DKGRAY)
+                        setPadding(0, dp(6), 0, 0)
+                    })
                 }
 
-                buttons.addView(Button(this).apply {
-                    text = "Edit"
-                    setOnClickListener { editItem(index) }
-                }, LinearLayout.LayoutParams(0, dp(48), 1f))
-
-                buttons.addView(Button(this).apply {
-                    text = "Picture"
-                    setOnClickListener { choosePicture(index) }
-                }, LinearLayout.LayoutParams(0, dp(48), 1f))
-
-                buttons.addView(Button(this).apply {
-                    text = "Delete"
-                    setOnClickListener {
-                        AlertDialog.Builder(this@MainActivity)
-                            .setTitle("Delete food item?")
-                            .setMessage(item.name)
-                            .setNegativeButton("Cancel", null)
-                            .setPositiveButton("Delete") { _, _ ->
-                                items.removeAt(index)
-                                saveItems()
-                                renderItems()
-                            }
-                            .show()
+                list.addView(
+                    card,
+                    LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        bottomMargin = dp(12)
                     }
-                }, LinearLayout.LayoutParams(0, dp(48), 1f))
-
-                card.addView(buttons)
-
-                list.addView(card, LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    bottomMargin = dp(12)
-                })
+                )
             }
         }
     }
 
+    // Three-dot actions for each dish.
+    private fun showDishMenu(index: Int) {
+        if (index !in items.indices) return
+
+        val item = items[index]
+        val popup = PopupMenu(this, list.findViewWithTag(index)
+            ?: findDishMenuAnchor(index))
+
+        popup.menu.add(0, 1, 0, "Edit dish")
+        popup.menu.add(0, 2, 1, "Edit price")
+        popup.menu.add(0, 3, 2, "Change food picture")
+        popup.menu.add(0, 4, 3, "Ingredients list")
+        popup.menu.add(0, 5, 4, "Delete dish")
+
+        popup.setOnMenuItemClickListener { menuItem ->
+            when (menuItem.itemId) {
+                1 -> editItem(index)
+                2 -> editPrice(index)
+                3 -> choosePicture(index)
+                4 -> editIngredients(index)
+                5 -> confirmDelete(index)
+            }
+            true
+        }
+
+        popup.show()
+    }
+
+    // Find the three-dot button belonging to this dish.
+    private fun findDishMenuAnchor(index: Int): android.view.View {
+        val card = findCardForItem(index)
+        return card.getChildAt(1)
+            .let { it as LinearLayout }
+            .getChildAt(1)
+    }
+
+    private fun findCardForItem(index: Int): LinearLayout {
+        val item = items[index]
+        val section = categories.indexOf(item.category)
+        var currentSection = -1
+
+        for (i in 0 until list.childCount) {
+            val child = list.getChildAt(i)
+
+            if (child is TextView &&
+                child.text.toString() in categories
+            ) {
+                currentSection++
+            }
+
+            if (currentSection == section &&
+                child is LinearLayout &&
+                child.childCount >= 2
+            ) {
+                val heading = child.getChildAt(1) as? LinearLayout
+                val title = heading?.getChildAt(0) as? TextView
+
+                if (title?.text?.toString() == item.name) {
+                    return child
+                }
+            }
+        }
+
+        throw IllegalStateException("Dish card not found")
+    }
+
+    private fun confirmDelete(index: Int) {
+        if (index !in items.indices) return
+        val item = items[index]
+
+        AlertDialog.Builder(this)
+            .setTitle("Delete food item?")
+            .setMessage("Delete ${item.name}?")
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Delete") { _, _ ->
+                items.removeAt(index)
+                saveItems()
+                renderItems()
+                Toast.makeText(
+                    this,
+                    "Food item deleted",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            .show()
+    }
+
     private fun editItem(index: Int) {
-        val old = if (index >= 0) items[index] else null
+        val old = if (index >= 0 && index < items.size) {
+            items[index]
+        } else {
+            null
+        }
 
         val form = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -212,12 +311,6 @@ class MainActivity : Activity() {
             hint = "Food name"
             setSingleLine(true)
             setText(old?.name ?: "")
-        }
-
-        val price = EditText(this).apply {
-            hint = "Price (e.g. 2.500 OMR)"
-            setSingleLine(true)
-            setText(old?.price ?: "")
         }
 
         val categorySpinner = Spinner(this)
@@ -238,18 +331,13 @@ class MainActivity : Activity() {
         form.addView(name)
 
         form.addView(TextView(this).apply {
-            text = "Price"
-        })
-        form.addView(price)
-
-        form.addView(TextView(this).apply {
             text = "Menu section"
             setPadding(0, dp(12), 0, dp(4))
         })
         form.addView(categorySpinner)
 
         val dialog = AlertDialog.Builder(this)
-            .setTitle(if (old == null) "Add Food Item" else "Edit Food Item")
+            .setTitle(if (old == null) "Add Food Item" else "Edit Dish")
             .setView(form)
             .setNegativeButton("Cancel", null)
             .setPositiveButton("Save", null)
@@ -259,33 +347,23 @@ class MainActivity : Activity() {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE)
                 .setOnClickListener {
                     val foodName = name.text.toString().trim()
-                    val foodPrice = price.text.toString().trim()
                     val foodCategory =
                         categorySpinner.selectedItem.toString()
 
-                    if (foodName.isEmpty() || foodPrice.isEmpty()) {
-                        Toast.makeText(
-                            this,
-                            "Enter food name and price",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                    if (foodName.isEmpty()) {
+                        name.error = "Enter food name"
                         return@setOnClickListener
                     }
 
                     if (old == null) {
-                        items.add(
-                            FoodItem(
-                                foodName,
-                                foodPrice,
-                                "",
-                                foodCategory
-                            )
-                        )
-                    } else {
-                        old.name = foodName
-                        old.price = foodPrice
-                        old.category = foodCategory
+                        // New dishes also need a price.
+                        dialog.dismiss()
+                        addNewDishWithPrice(foodName, foodCategory)
+                        return@setOnClickListener
                     }
+
+                    old.name = foodName
+                    old.category = foodCategory
 
                     saveItems()
                     dialog.dismiss()
@@ -296,12 +374,114 @@ class MainActivity : Activity() {
         dialog.show()
     }
 
+    private fun addNewDishWithPrice(
+        foodName: String,
+        foodCategory: String
+    ) {
+        val priceInput = EditText(this).apply {
+            hint = "Price (e.g. 2.500 OMR)"
+            setSingleLine(true)
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Enter dish price")
+            .setView(priceInput)
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Save") { _, _ ->
+                val price = priceInput.text.toString().trim()
+
+                if (price.isEmpty()) {
+                    Toast.makeText(
+                        this,
+                        "Enter a price",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    return@setPositiveButton
+                }
+
+                items.add(
+                    FoodItem(
+                        name = foodName,
+                        price = price,
+                        category = foodCategory
+                    )
+                )
+
+                saveItems()
+                renderItems()
+            }
+            .show()
+    }
+
+    private fun editPrice(index: Int) {
+        if (index !in items.indices) return
+
+        val item = items[index]
+        val input = EditText(this).apply {
+            hint = "Price in OMR"
+            setSingleLine(true)
+            setText(item.price)
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Edit price")
+            .setMessage(item.name)
+            .setView(input)
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Save") { _, _ ->
+                val price = input.text.toString().trim()
+
+                if (price.isNotEmpty()) {
+                    item.price = price
+                    saveItems()
+                    renderItems()
+                } else {
+                    Toast.makeText(
+                        this,
+                        "Enter a price",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+            .show()
+    }
+
+    private fun editIngredients(index: Int) {
+        if (index !in items.indices) return
+
+        val item = items[index]
+
+        val input = EditText(this).apply {
+            hint = "Enter ingredients, separated by commas"
+            setText(item.ingredients)
+            minLines = 4
+            gravity = Gravity.TOP
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Ingredients: ${item.name}")
+            .setMessage("Enter the ingredients for this dish.")
+            .setView(input)
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Save") { _, _ ->
+                item.ingredients = input.text.toString().trim()
+                saveItems()
+                renderItems()
+            }
+            .show()
+    }
+
     private fun choosePicture(index: Int) {
+        if (index !in items.indices) return
+
         pictureIndex = index
+
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
             type = "image/*"
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
+
         startActivityForResult(intent, 100)
     }
 
@@ -321,7 +501,9 @@ class MainActivity : Activity() {
                     uri,
                     Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
-            } catch (_: Exception) { }
+            } catch (_: Exception) {
+                // Some document providers do not support persisted grants.
+            }
 
             if (pictureIndex in items.indices) {
                 items[pictureIndex].image = uri.toString()
@@ -345,6 +527,7 @@ class MainActivity : Activity() {
                 putString("price_$i", item.price)
                 putString("image_$i", item.image)
                 putString("category_$i", item.category)
+                putString("ingredients_$i", item.ingredients)
             }
 
             apply()
@@ -367,11 +550,18 @@ class MainActivity : Activity() {
 
             items.add(
                 FoodItem(
-                    prefs.getString("name_$i", "") ?: "",
-                    prefs.getString("price_$i", "") ?: "",
-                    prefs.getString("image_$i", "") ?: "",
-                    if (savedCategory in categories)
-                        savedCategory else "Starters"
+                    name = prefs.getString("name_$i", "") ?: "",
+                    price = prefs.getString("price_$i", "") ?: "",
+                    image = prefs.getString("image_$i", "") ?: "",
+                    category = if (savedCategory in categories) {
+                        savedCategory
+                    } else {
+                        "Starters"
+                    },
+                    ingredients = prefs.getString(
+                        "ingredients_$i",
+                        ""
+                    ) ?: ""
                 )
             )
         }
