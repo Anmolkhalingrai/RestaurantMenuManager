@@ -188,7 +188,7 @@ class MainActivity : Activity() {
                     photo,
                     LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
-                        dp(145)
+                        dp(260)
                     )
                 )
 
