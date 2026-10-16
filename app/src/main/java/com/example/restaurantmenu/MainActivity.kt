@@ -25,16 +25,20 @@ class MainActivity : Activity() {
         "Salads",
         "Soups",
         "Starters",
-        "Dynamite Fries",
+        "Dynamites",
+        "Baked Potatoes",
+        "Pasta & Special",
         "Burgers",
-        "Pasta",
-        "Pizza",
-        "Juice",
-        "Smoothie",
-        "Mojito",
-        "LTO Soft Drinks",
-        "Hot Beverages",
-        "Coffee"
+        "Pizzas",
+        "Desserts",
+        "Fresh Juices",
+        "Mojitos",
+        "Milkshakes",
+        "Smoothies"
+        "Hot Coffees",
+        "Cold Coffee",
+        "0ther Drinks",
+        "L.T.O"
     )
 
     private val items = mutableListOf<FoodItem>()
