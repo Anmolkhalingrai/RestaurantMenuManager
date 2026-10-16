@@ -6,6 +6,7 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.view.Gravity
@@ -46,10 +47,17 @@ class MainActivity : Activity() {
     private val items = mutableListOf<FoodItem>()
     private lateinit var list: LinearLayout
     private lateinit var backButton: Button
+
     private var selectedCategory: String? = null
     private var pictureIndex = -1
 
-    private val green = Color.rgb(22, 101, 52)
+    private val forest = Color.rgb(20, 65, 47)
+    private val green = Color.rgb(30, 91, 65)
+    private val gold = Color.rgb(196, 157, 83)
+    private val cream = Color.rgb(249, 246, 237)
+    private val ink = Color.rgb(40, 43, 37)
+    private val muted = Color.rgb(111, 111, 99)
+    private val white = Color.WHITE
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,44 +68,149 @@ class MainActivity : Activity() {
     private fun dp(n: Int): Int =
         (n * resources.displayMetrics.density).toInt()
 
+    private fun roundedBackground(
+        color: Int,
+        radius: Int = 16,
+        strokeColor: Int = Color.TRANSPARENT
+    ): GradientDrawable {
+        return GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = dp(radius).toFloat()
+            setColor(color)
+            if (strokeColor != Color.TRANSPARENT) {
+                setStroke(dp(1), strokeColor)
+            }
+        }
+    }
+
+    private fun makeButton(
+        label: String,
+        backgroundColor: Int = green,
+        textColor: Int = white
+    ): Button {
+        return Button(this).apply {
+            text = label
+            setTextColor(textColor)
+            textSize = 14f
+            setTypeface(null, Typeface.BOLD)
+            background = roundedBackground(backgroundColor, 14)
+            isAllCaps = false
+            minHeight = dp(48)
+            setPadding(dp(16), dp(8), dp(16), dp(8))
+        }
+    }
+
+    private fun makeText(
+        value: String,
+        size: Float,
+        color: Int,
+        bold: Boolean = false
+    ): TextView {
+        return TextView(this).apply {
+            text = value
+            textSize = size
+            setTextColor(color)
+            if (bold) setTypeface(null, Typeface.BOLD)
+        }
+    }
+
     private fun showScreen() {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(12), dp(16), dp(8))
-            setBackgroundColor(Color.rgb(248, 250, 248))
+            setPadding(dp(16), dp(12), dp(16), dp(10))
+            setBackgroundColor(cream)
         }
 
-        root.addView(TextView(this).apply {
-            text = "IBC learning App By Anmol Rai"
-            textSize = 25f
-            setTypeface(null, Typeface.BOLD)
-            setTextColor(green)
+        val header = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
-            setPadding(0, dp(10), 0, dp(16))
+            setPadding(dp(16), dp(22), dp(16), dp(22))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(forest, green)
+            ).apply {
+                cornerRadius = dp(22).toFloat()
+            }
+        }
+
+        header.addView(makeText("✦  IBC  ✦", 14f, gold, true).apply {
+            gravity = Gravity.CENTER
+            letterSpacing = 0.18f
         })
 
-        root.addView(Button(this).apply {
-            text = "+ Add Food Item"
-            setBackgroundColor(green)
-            setTextColor(Color.WHITE)
-            setOnClickListener { editItem(-1) }
+        header.addView(makeText(
+            "IBC learning App By Anmol Rai",
+            23f,
+            white,
+            true
+        ).apply {
+            gravity = Gravity.CENTER
+            setPadding(0, dp(8), 0, dp(4))
         })
 
-        backButton = Button(this).apply {
-            text = "← Back to All Categories"
-            setTextColor(Color.WHITE)
-            setBackgroundColor(green)
+        header.addView(makeText(
+            "SURRENDER TO THE TASTE",
+            11f,
+            Color.rgb(239, 219, 170),
+            true
+        ).apply {
+            gravity = Gravity.CENTER
+            letterSpacing = 0.15f
+        })
+
+        root.addView(
+            header,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = dp(14)
+            }
+        )
+
+        val addButton = makeButton(
+            "＋   Add Food Item",
+            forest,
+            white
+        )
+        addButton.setOnClickListener { editItem(-1) }
+
+        root.addView(
+            addButton,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = dp(8)
+            }
+        )
+
+        backButton = makeButton(
+            "←   Back to All Categories",
+            gold,
+            forest
+        ).apply {
             visibility = View.GONE
-
             setOnClickListener {
                 selectedCategory = null
                 renderItems()
             }
         }
 
-        root.addView(backButton)
+        root.addView(
+            backButton,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = dp(10)
+            }
+        )
 
-        val scroll = ScrollView(this)
+        val scroll = ScrollView(this).apply {
+            clipToPadding = false
+            isFillViewport = false
+        }
 
         list = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -121,45 +234,91 @@ class MainActivity : Activity() {
     private fun renderItems() {
         list.removeAllViews()
 
-        backButton.visibility = if (selectedCategory == null) {
-            View.GONE
-        } else {
-            View.VISIBLE
-        }
+        backButton.visibility =
+            if (selectedCategory == null) View.GONE else View.VISIBLE
 
-        val categoriesToShow = selectedCategory?.let {
-            listOf(it)
-        } ?: categories
+        val categoriesToShow =
+            selectedCategory?.let { listOf(it) } ?: categories
 
         categoriesToShow.forEach { category ->
 
             val sectionItems = items.withIndex()
                 .filter { it.value.category == category }
 
-            // Tap a category heading to open that section.
-            list.addView(TextView(this).apply {
-                text = "▶  $category"
-                textSize = 21f
-                setTypeface(null, Typeface.BOLD)
-                setTextColor(Color.WHITE)
-                setBackgroundColor(green)
-                setPadding(dp(12), dp(12), dp(12), dp(12))
+            val categoryHeader = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(14), dp(13), dp(14), dp(13))
+                background = roundedBackground(forest, 15, gold)
                 isClickable = true
                 isFocusable = true
-
                 setOnClickListener {
                     selectedCategory = category
                     renderItems()
                 }
-            })
+            }
+
+            categoryHeader.addView(
+                makeText("✦", 17f, gold, true).apply {
+                    setPadding(0, 0, dp(10), 0)
+                }
+            )
+
+            categoryHeader.addView(
+                makeText(category, 19f, white, true),
+                LinearLayout.LayoutParams(0, -2, 1f)
+            )
+
+            categoryHeader.addView(
+                makeText("${sectionItems.size} items", 11f, gold, true)
+            )
+
+            list.addView(
+                categoryHeader,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = dp(8)
+                    bottomMargin = dp(10)
+                }
+            )
 
             if (sectionItems.isEmpty()) {
-                list.addView(TextView(this).apply {
-                    text = "No items yet"
-                    textSize = 14f
-                    setTextColor(Color.GRAY)
-                    setPadding(dp(12), dp(10), dp(12), dp(10))
+                val empty = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER
+                    setPadding(dp(12), dp(20), dp(12), dp(20))
+                    background = roundedBackground(white, 16, gold)
+                }
+
+                empty.addView(makeText(
+                    "✧",
+                    25f,
+                    gold,
+                    true
+                ).apply {
+                    gravity = Gravity.CENTER
                 })
+
+                empty.addView(makeText(
+                    "No dishes added yet",
+                    15f,
+                    muted
+                ).apply {
+                    gravity = Gravity.CENTER
+                    setPadding(0, dp(5), 0, 0)
+                })
+
+                list.addView(
+                    empty,
+                    LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        bottomMargin = dp(12)
+                    }
+                )
             }
 
             sectionItems.forEach { indexed ->
@@ -168,19 +327,23 @@ class MainActivity : Activity() {
 
                 val card = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
-                    setPadding(dp(12), dp(10), dp(12), dp(10))
-                    setBackgroundColor(Color.WHITE)
+                    setPadding(dp(10), dp(10), dp(10), dp(14))
+                    background = roundedBackground(white, 20, gold)
+                    elevation = dp(3).toFloat()
                 }
 
                 val photo = ImageView(this).apply {
                     scaleType = ImageView.ScaleType.CENTER_CROP
+                    background = roundedBackground(cream, 16)
+                    contentDescription = item.name
+                    clipToOutline = true
                 }
 
                 if (item.image.isNotEmpty()) {
                     try {
                         photo.setImageURI(Uri.parse(item.image))
                     } catch (_: Exception) {
-                        // Leave the picture area empty if unavailable.
+                        // Keep the picture area available for replacement.
                     }
                 }
 
@@ -198,24 +361,22 @@ class MainActivity : Activity() {
                 }
 
                 heading.addView(
-                    TextView(this).apply {
-                        text = item.name
-                        textSize = 20f
-                        setTypeface(null, Typeface.BOLD)
-                        setTextColor(Color.BLACK)
-                        setPadding(0, dp(8), 0, dp(4))
+                    makeText(item.name, 20f, forest, true).apply {
+                        setPadding(dp(2), dp(10), dp(4), dp(6))
                     },
                     LinearLayout.LayoutParams(0, -2, 1f)
                 )
 
                 heading.addView(Button(this).apply {
-                    text = "\u22EE"
+                    text = "⋮"
                     textSize = 26f
-                    minWidth = dp(48)
-                    minimumWidth = dp(48)
+                    setTextColor(forest)
+                    background = roundedBackground(cream, 12)
+                    minWidth = dp(44)
+                    minimumWidth = dp(44)
+                    minHeight = dp(44)
                     setPadding(0, 0, 0, 0)
                     contentDescription = "Options for ${item.name}"
-
                     setOnClickListener { view ->
                         showDishMenu(index, view)
                     }
@@ -223,18 +384,46 @@ class MainActivity : Activity() {
 
                 card.addView(heading)
 
-                card.addView(TextView(this).apply {
-                    text = "Price: ${item.price}"
-                    textSize = 17f
-                    setTextColor(green)
-                })
+                card.addView(View(this).apply {
+                    setBackgroundColor(gold)
+                }, LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    dp(1)
+                ))
+
+                val priceRow = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(2), dp(9), dp(2), dp(4))
+                }
+
+                priceRow.addView(
+                    makeText("PRICE", 11f, muted, true),
+                    LinearLayout.LayoutParams(0, -2, 1f)
+                )
+
+                priceRow.addView(
+                    makeText(displayPrice(item.price), 19f, green, true)
+                )
+
+                card.addView(priceRow)
 
                 if (item.ingredients.isNotBlank()) {
-                    card.addView(TextView(this).apply {
-                        text = "Ingredients: ${item.ingredients}"
-                        textSize = 14f
-                        setTextColor(Color.DKGRAY)
-                        setPadding(0, dp(6), 0, 0)
+                    card.addView(makeText(
+                        "Ingredients",
+                        12f,
+                        gold,
+                        true
+                    ).apply {
+                        setPadding(dp(2), dp(8), 0, dp(2))
+                    })
+
+                    card.addView(makeText(
+                        item.ingredients,
+                        14f,
+                        ink
+                    ).apply {
+                        setPadding(dp(2), 0, dp(2), dp(4))
                     })
                 }
 
@@ -244,19 +433,26 @@ class MainActivity : Activity() {
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
                     ).apply {
-                        bottomMargin = dp(12)
+                        bottomMargin = dp(14)
                     }
                 )
             }
         }
     }
 
-    // Three-dot actions for each dish.
+    private fun displayPrice(price: String): String {
+        val clean = price.trim()
+        return if (clean.contains("OMR", ignoreCase = true)) {
+            clean
+        } else {
+            "OMR $clean"
+        }
+    }
+
     private fun showDishMenu(index: Int, anchor: View) {
         if (index !in items.indices) return
 
         val popup = PopupMenu(this, anchor)
-
         popup.menu.add(0, 1, 0, "Edit dish")
         popup.menu.add(0, 2, 1, "Edit price")
         popup.menu.add(0, 3, 2, "Change food picture")
@@ -279,7 +475,6 @@ class MainActivity : Activity() {
 
     private fun confirmDelete(index: Int) {
         if (index !in items.indices) return
-
         val item = items[index]
 
         AlertDialog.Builder(this)
@@ -290,7 +485,6 @@ class MainActivity : Activity() {
                 items.removeAt(index)
                 saveItems()
                 renderItems()
-
                 Toast.makeText(
                     this,
                     "Food item deleted",
@@ -301,11 +495,7 @@ class MainActivity : Activity() {
     }
 
     private fun editItem(index: Int) {
-        val old = if (index >= 0 && index < items.size) {
-            items[index]
-        } else {
-            null
-        }
+        val old = if (index in items.indices) items[index] else null
 
         val form = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -326,19 +516,20 @@ class MainActivity : Activity() {
         )
 
         val selected = categories.indexOf(old?.category)
-        categorySpinner.setSelection(
-            if (selected >= 0) selected else 0
-        )
+        categorySpinner.setSelection(if (selected >= 0) selected else 0)
 
-        form.addView(TextView(this).apply {
-            text = "Food name"
-        })
+        form.addView(makeText("Food name", 14f, forest, true))
         form.addView(name)
 
-        form.addView(TextView(this).apply {
-            text = "Menu section"
+        form.addView(makeText(
+            "Menu section",
+            14f,
+            forest,
+            true
+        ).apply {
             setPadding(0, dp(12), 0, dp(4))
         })
+
         form.addView(categorySpinner)
 
         val dialog = AlertDialog.Builder(this)
@@ -368,7 +559,6 @@ class MainActivity : Activity() {
 
                     old.name = foodName
                     old.category = foodCategory
-
                     saveItems()
                     dialog.dismiss()
                     renderItems()
@@ -383,8 +573,11 @@ class MainActivity : Activity() {
         foodCategory: String
     ) {
         val priceInput = EditText(this).apply {
-            hint = "Price (e.g. 2.500 OMR)"
+            hint = "Price in OMR (e.g. 2.500)"
             setSingleLine(true)
+            inputType =
+                android.text.InputType.TYPE_CLASS_NUMBER or
+                android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
         }
 
         AlertDialog.Builder(this)
@@ -419,13 +612,15 @@ class MainActivity : Activity() {
 
     private fun editPrice(index: Int) {
         if (index !in items.indices) return
-
         val item = items[index]
 
         val input = EditText(this).apply {
             hint = "Price in OMR"
             setSingleLine(true)
             setText(item.price)
+            inputType =
+                android.text.InputType.TYPE_CLASS_NUMBER or
+                android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
         }
 
         AlertDialog.Builder(this)
@@ -453,11 +648,10 @@ class MainActivity : Activity() {
 
     private fun editIngredients(index: Int) {
         if (index !in items.indices) return
-
         val item = items[index]
 
         val input = EditText(this).apply {
-            hint = "Enter ingredients, separated by commas"
+            hint = "Ingredients, separated by commas"
             setText(item.ingredients)
             minLines = 4
             gravity = Gravity.TOP
@@ -478,7 +672,6 @@ class MainActivity : Activity() {
 
     private fun choosePicture(index: Int) {
         if (index !in items.indices) return
-
         pictureIndex = index
 
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
@@ -507,7 +700,7 @@ class MainActivity : Activity() {
                     Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
             } catch (_: Exception) {
-                // Some providers do not support persisted grants.
+                // Some image providers do not support persisted access.
             }
 
             if (pictureIndex in items.indices) {
