@@ -60,7 +60,7 @@ class MainActivity : Activity() {
         }
 
         root.addView(TextView(this).apply {
-            text = "Restaurant Menu Manager"
+            text = "IBC learning App By Anmol Rai"
             textSize = 25f
             setTypeface(null, Typeface.BOLD)
             setTextColor(green)
