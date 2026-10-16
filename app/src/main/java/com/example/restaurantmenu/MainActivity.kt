@@ -1,3 +1,4 @@
+
 package com.example.restaurantmenu
 
 import android.app.Activity
@@ -8,6 +9,7 @@ import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
 import android.view.Gravity
+import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 
@@ -22,27 +24,29 @@ data class FoodItem(
 class MainActivity : Activity() {
 
     private val categories = listOf(
-    "Salads",
-    "Soups",
-    "Starters",
-    "Dynamites",
-    "Baked Potatoes",
-    "Pasta & Special",
-    "Burgers",
-    "Pizzas",
-    "Desserts",
-    "Fresh Juices",
-    "Mojitos",
-    "Milkshakes",
-    "Smoothies",
-    "Hot Coffees",
-    "Cold Coffee",
-    "Other Drinks",
-    "L.T.O"
-)
+        "Salads",
+        "Soups",
+        "Starters",
+        "Dynamites",
+        "Baked Potatoes",
+        "Pasta & Special",
+        "Burgers",
+        "Pizzas",
+        "Desserts",
+        "Fresh Juices",
+        "Mojitos",
+        "Milkshakes",
+        "Smoothies",
+        "Hot Coffees",
+        "Cold Coffee",
+        "Other Drinks",
+        "L.T.O"
+    )
 
     private val items = mutableListOf<FoodItem>()
     private lateinit var list: LinearLayout
+    private lateinit var backButton: Button
+    private var selectedCategory: String? = null
     private var pictureIndex = -1
 
     private val green = Color.rgb(22, 101, 52)
@@ -79,6 +83,20 @@ class MainActivity : Activity() {
             setOnClickListener { editItem(-1) }
         })
 
+        backButton = Button(this).apply {
+            text = "← Back to All Categories"
+            setTextColor(Color.WHITE)
+            setBackgroundColor(green)
+            visibility = View.GONE
+
+            setOnClickListener {
+                selectedCategory = null
+                renderItems()
+            }
+        }
+
+        root.addView(backButton)
+
         val scroll = ScrollView(this)
 
         list = LinearLayout(this).apply {
@@ -103,17 +121,36 @@ class MainActivity : Activity() {
     private fun renderItems() {
         list.removeAllViews()
 
-        categories.forEach { category ->
+        backButton.visibility = if (selectedCategory == null) {
+            View.GONE
+        } else {
+            View.VISIBLE
+        }
+
+        val categoriesToShow = selectedCategory?.let {
+            listOf(it)
+        } ?: categories
+
+        categoriesToShow.forEach { category ->
+
             val sectionItems = items.withIndex()
                 .filter { it.value.category == category }
 
+            // Tap a category heading to open that section.
             list.addView(TextView(this).apply {
-                text = category
+                text = "▶  $category"
                 textSize = 21f
                 setTypeface(null, Typeface.BOLD)
                 setTextColor(Color.WHITE)
                 setBackgroundColor(green)
                 setPadding(dp(12), dp(12), dp(12), dp(12))
+                isClickable = true
+                isFocusable = true
+
+                setOnClickListener {
+                    selectedCategory = category
+                    renderItems()
+                }
             })
 
             if (sectionItems.isEmpty()) {
@@ -143,7 +180,7 @@ class MainActivity : Activity() {
                     try {
                         photo.setImageURI(Uri.parse(item.image))
                     } catch (_: Exception) {
-                        // Keep the picture area empty if unavailable.
+                        // Leave the picture area empty if unavailable.
                     }
                 }
 
@@ -155,7 +192,6 @@ class MainActivity : Activity() {
                     )
                 )
 
-                // Dish name and three-dot menu.
                 val heading = LinearLayout(this).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
@@ -179,7 +215,10 @@ class MainActivity : Activity() {
                     minimumWidth = dp(48)
                     setPadding(0, 0, 0, 0)
                     contentDescription = "Options for ${item.name}"
-                    setOnClickListener { showDishMenu(index) }
+
+                    setOnClickListener { view ->
+                        showDishMenu(index, view)
+                    }
                 })
 
                 card.addView(heading)
@@ -213,12 +252,10 @@ class MainActivity : Activity() {
     }
 
     // Three-dot actions for each dish.
-    private fun showDishMenu(index: Int) {
+    private fun showDishMenu(index: Int, anchor: View) {
         if (index !in items.indices) return
 
-        val item = items[index]
-        val popup = PopupMenu(this, list.findViewWithTag(index)
-            ?: findDishMenuAnchor(index))
+        val popup = PopupMenu(this, anchor)
 
         popup.menu.add(0, 1, 0, "Edit dish")
         popup.menu.add(0, 2, 1, "Edit price")
@@ -240,46 +277,9 @@ class MainActivity : Activity() {
         popup.show()
     }
 
-    // Find the three-dot button belonging to this dish.
-    private fun findDishMenuAnchor(index: Int): android.view.View {
-        val card = findCardForItem(index)
-        return card.getChildAt(1)
-            .let { it as LinearLayout }
-            .getChildAt(1)
-    }
-
-    private fun findCardForItem(index: Int): LinearLayout {
-        val item = items[index]
-        val section = categories.indexOf(item.category)
-        var currentSection = -1
-
-        for (i in 0 until list.childCount) {
-            val child = list.getChildAt(i)
-
-            if (child is TextView &&
-                child.text.toString() in categories
-            ) {
-                currentSection++
-            }
-
-            if (currentSection == section &&
-                child is LinearLayout &&
-                child.childCount >= 2
-            ) {
-                val heading = child.getChildAt(1) as? LinearLayout
-                val title = heading?.getChildAt(0) as? TextView
-
-                if (title?.text?.toString() == item.name) {
-                    return child
-                }
-            }
-        }
-
-        throw IllegalStateException("Dish card not found")
-    }
-
     private fun confirmDelete(index: Int) {
         if (index !in items.indices) return
+
         val item = items[index]
 
         AlertDialog.Builder(this)
@@ -290,6 +290,7 @@ class MainActivity : Activity() {
                 items.removeAt(index)
                 saveItems()
                 renderItems()
+
                 Toast.makeText(
                     this,
                     "Food item deleted",
@@ -360,7 +361,6 @@ class MainActivity : Activity() {
                     }
 
                     if (old == null) {
-                        // New dishes also need a price.
                         dialog.dismiss()
                         addNewDishWithPrice(foodName, foodCategory)
                         return@setOnClickListener
@@ -421,6 +421,7 @@ class MainActivity : Activity() {
         if (index !in items.indices) return
 
         val item = items[index]
+
         val input = EditText(this).apply {
             hint = "Price in OMR"
             setSingleLine(true)
@@ -506,7 +507,7 @@ class MainActivity : Activity() {
                     Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
             } catch (_: Exception) {
-                // Some document providers do not support persisted grants.
+                // Some providers do not support persisted grants.
             }
 
             if (pictureIndex in items.indices) {
