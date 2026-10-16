@@ -22,24 +22,24 @@ data class FoodItem(
 class MainActivity : Activity() {
 
     private val categories = listOf(
-        "Salads",
-        "Soups",
-        "Starters",
-        "Dynamites",
-        "Baked Potatoes",
-        "Pasta & Special",
-        "Burgers",
-        "Pizzas",
-        "Desserts",
-        "Fresh Juices",
-        "Mojitos",
-        "Milkshakes",
-        "Smoothies"
-        "Hot Coffees",
-        "Cold Coffee",
-        "0ther Drinks",
-        "L.T.O"
-    )
+    "Salads",
+    "Soups",
+    "Starters",
+    "Dynamites",
+    "Baked Potatoes",
+    "Pasta & Special",
+    "Burgers",
+    "Pizzas",
+    "Desserts",
+    "Fresh Juices",
+    "Mojitos",
+    "Milkshakes",
+    "Smoothies",
+    "Hot Coffees",
+    "Cold Coffee",
+    "Other Drinks",
+    "L.T.O"
+)
 
     private val items = mutableListOf<FoodItem>()
     private lateinit var list: LinearLayout
